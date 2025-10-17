@@ -1,0 +1,1031 @@
+﻿diff --git a/README.md b/README.md
+index 8d5d8144c7dfa151693962a9be9adde64de02130..05e788811b1263cca93c9aec317b1e369f7e7094 100644
+--- a/README.md
++++ b/README.md
+@@ -1,2 +1,66 @@
+ # vrHouse
+-App de conversÃ£o de projetos 3D para o VR
++
++Plataforma para converter projetos residenciais 3D em experiÃªncias de realidade virtual com fÃ­sica e realismo gerados por IA.
++
++## VisÃ£o geral
++
++A estrutura proposta organiza o projeto em estÃ¡gios claros de ingestÃ£o, processamento, inferÃªncia e exportaÃ§Ã£o. Ela facilita a criaÃ§Ã£o de pipelines automatizados que:
++
++1. Importam plantas/modelos (IFC, FBX, OBJ, GLTF/GLB e Revit RVT).
++2. Otimizam a geometria e refinam materiais para VR.
++3. Aplicam modelos de IA para simular fÃ­sica e realismo.
++4. Empacotam os dados em experiÃªncias VR prontas para engines como Unity, Unreal ou WebXR.
++
++## Estrutura de diretÃ³rios
++
++```
++vrHouse/
++â”œâ”€â”€ assets/                # Texturas, HDRIs e outros recursos compartilhados
++â”œâ”€â”€ config/                # Arquivos de configuraÃ§Ã£o (YAML, JSON)
++â”œâ”€â”€ docs/                  # DocumentaÃ§Ã£o tÃ©cnica e guias
++â”œâ”€â”€ examples/              # Exemplos de uso e cenas de demonstraÃ§Ã£o
++â”œâ”€â”€ src/                   # CÃ³digo-fonte principal da aplicaÃ§Ã£o
++â”‚   â””â”€â”€ vrhouse/
++â”‚       â”œâ”€â”€ core.py        # Modelos de dados e exceÃ§Ãµes base
++â”‚       â”œâ”€â”€ cli.py         # Interface de linha de comando
++â”‚       â””â”€â”€ pipeline/
++â”‚           â”œâ”€â”€ ai/        # Modelos e serviÃ§os de IA
++â”‚           â”œâ”€â”€ exporters/ # Empacotamento e exportaÃ§Ã£o para VR
++â”‚           â”œâ”€â”€ importers/ # Conversores de formatos de entrada (IFC, OBJ, etc.)
++â”‚           â””â”€â”€ processors/# OtimizaÃ§Ãµes geomÃ©tricas, materiais, iluminaÃ§Ã£o
++â”œâ”€â”€ tests/                 # Futuras suÃ­tes automatizadas
++â””â”€â”€ README.md
++```
++
++## Interface grÃ¡fica inicial
++
++UsuÃ¡rios nÃ£o tÃ©cnicos podem executar o aplicativo desktop (Tkinter) com:
++
++```bash
++python -m vrhouse.ui.app
++```
++
++Na tela inicial Ã© possÃ­vel:
++
++- Selecionar o arquivo da planta em um dos formatos suportados.
++- Escolher a pasta de saÃ­da e o nome do projeto.
++- Ativar ou desativar fÃ­sica e realismo por IA.
++- Gerar ou informar uma chave prÃ³pria para criptografia.
++- Acompanhar o progresso da conversÃ£o em tempo real.
++- Visualizar um preview descriptivo do pacote gerado (apÃ³s informar a chave correta).
++
++## ConversÃ£o via linha de comando
++
++```bash
++python -m vrhouse.cli ./modelos/casa.ifc "Casa dos Santos" ./build
++```
++
++Ao final da execuÃ§Ã£o, o sistema gera um pacote criptografado (`.vrpkg`) e informa a chave utilizada. Guarde essa chave com seguranÃ§a: apenas os aplicativos oficiais de desktop ou VR conseguem abrir o conteÃºdo.
++
++## PrÃ³ximos passos sugeridos
++
++- Integrar bibliotecas de parsing (ex.: IfcOpenShell, trimesh) nas classes de importaÃ§Ã£o.
++- Implementar otimizaÃ§Ã£o real de malhas e UVs (ex.: Blender Python API, assimp).
++- Conectar modelos de IA para textura procedimental e simulaÃ§Ã£o fÃ­sica.
++- Desenvolver exportaÃ§Ã£o direta para motores VR e WebXR.
++- Adicionar testes automatizados e pipelines CI/CD.
+diff --git a/config/default.yaml b/config/default.yaml
+new file mode 100644
+index 0000000000000000000000000000000000000000..752e7753341bb9e621b5306f4af73e698cd5fe31
+--- /dev/null
++++ b/config/default.yaml
+@@ -0,0 +1,19 @@
++# ConfiguraÃ§Ãµes padrÃ£o do pipeline vrHouse
++project:
++  target_platforms:
++    - meta-quest
++    - htc-vive
++    - pimax
++pipeline:
++  enable_physics: true
++  enable_ai_realism: true
++  geometry_optimizer:
++    decimation_ratio: 0.5
++    preserve_normals: true
++  material_enhancer:
++    texture_resolution: 2048
++    allow_procedural_textures: true
++export:
++  output_format: vrpkg
++  encrypt_packages: true
++  compress_assets: false
+diff --git a/docs/architecture.md b/docs/architecture.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..f72ee56edeab402ec0c564740b74da033bcb499b
+--- /dev/null
++++ b/docs/architecture.md
+@@ -0,0 +1,39 @@
++# Arquitetura inicial do vrHouse
++
++## Objetivo
++
++Transformar plantas arquitetÃ´nicas (IFC, FBX, OBJ, GLTF/GLB, RVT) em experiÃªncias VR com fÃ­sica e realismo assistidos por IA, entregues em pacotes criptografados exclusivos.
++
++## Pipeline de alto nÃ­vel
++
++1. **IngestÃ£o**
++   - Importadores especÃ­ficos por formato.
++   - ValidaÃ§Ã£o de arquivos e extraÃ§Ã£o de metadados.
++2. **Processamento**
++   - OtimizaÃ§Ã£o de geometria (decimaÃ§Ã£o, LOD, UVs).
++   - Enriquecimento de materiais e iluminaÃ§Ã£o.
++3. **IA aplicada**
++   - Modelos que inferem propriedades fÃ­sicas (massa, fricÃ§Ã£o, densidade).
++   - GeraÃ§Ã£o procedural de texturas e materiais compatÃ­veis com PBR.
++4. **ExportaÃ§Ã£o**
++   - ConstruÃ§Ã£o de cena VR (Unity/Unreal/WebXR).
++   - Empacotamento e deploy para dispositivos.
++
++## Componentes chave
++
++- `core.SceneSpecification`: descreve o projeto a ser convertido.
++- `pipeline.importers.MultiFormatImporter`: roteia automaticamente entre os formatos IFC, FBX, OBJ, GLTF/GLB e RVT.
++- `pipeline.processors.GeometryOptimizer`: otimiza malhas para VR.
++- `pipeline.processors.MaterialEnhancer`: adiciona materiais realistas via IA.
++- `pipeline.ai.PhysicsInferenceModel`: gera perfis fÃ­sicos simulados.
++- `pipeline.exporters.VRSceneBuilder`: monta o resultado final, criptografa e exporta.
++- `pipeline.runner.run_conversion`: orquestra o pipeline reportando progresso.
++- `ui.app.VRHouseApp`: interface desktop em Tkinter para usuÃ¡rios leigos acompanharem a conversÃ£o.
++
++## Roadmap tÃ©cnico
++
++- Suporte a mÃºltiplos formatos de importaÃ§Ã£o (IFC, FBX, OBJ, GLTF, Revit) com parsing real.
++- IntegraÃ§Ã£o com motores (Unity, Unreal) via APIs ou arquivos intermediÃ¡rios.
++- Treinamento/uso de modelos IA para sugestÃµes de layout, iluminaÃ§Ã£o, materiais.
++- Painel web para visualizaÃ§Ã£o de status e gerenciamento de projetos.
++- AutomatizaÃ§Ã£o CI/CD e suporte a plugins.
+diff --git a/examples/sample_project.md b/examples/sample_project.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..fdb9085ef56e8fb5b17228b7b4dd0ee4c2f1124a
+--- /dev/null
++++ b/examples/sample_project.md
+@@ -0,0 +1,18 @@
++# Exemplo de execuÃ§Ã£o
++
++```bash
++python -m vrhouse.cli ./modelos/casa.ifc "Casa Demo" ./build
++```
++
++Resultado esperado:
++- Pacote criptografado `build/Casa Demo.vrpkg` pronto para ser consumido pelos players oficiais.
++- Arquivo `build/Casa Demo.key` contendo a chave gerada (quando nenhuma Ã© informada).
++- Logs informando cada etapa do pipeline (importaÃ§Ã£o, otimizaÃ§Ã£o, IA, exportaÃ§Ã£o).
++
++Para um fluxo assistido, execute:
++
++```bash
++python -m vrhouse.ui.app
++```
++
++Use a interface para acompanhar o progresso em tempo real e abrir um preview textual dos dados protegidos.
+diff --git a/pyproject.toml b/pyproject.toml
+new file mode 100644
+index 0000000000000000000000000000000000000000..8c2d9fd86233c527cd7e9609c897b677c390e954
+--- /dev/null
++++ b/pyproject.toml
+@@ -0,0 +1,30 @@
++[build-system]
++requires = ["setuptools>=67", "wheel"]
++build-backend = "setuptools.build_meta"
++
++[project]
++name = "vrhouse"
++version = "0.1.0"
++description = "ConversÃ£o de plantas arquitetÃ´nicas 3D em experiÃªncias VR com IA"
++authors = [
++    { name = "Equipe vrHouse" }
++]
++readme = "README.md"
++requires-python = ">=3.10"
++dependencies = [
++    "cryptography>=41",
++]
++classifiers = [
++    "Programming Language :: Python :: 3",
++    "Intended Audience :: Developers",
++    "Topic :: Multimedia :: Graphics :: 3D Modeling",
++]
++
++[project.optional-dependencies]
++dev = [
++    "pytest",
++    "ruff",
++]
++
++[project.scripts]
++vrhouse = "vrhouse.cli:run_cli"
+diff --git a/src/vrhouse/__init__.py b/src/vrhouse/__init__.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..77ec6e7d09ef4b76526b7b13f165ec426f64c961
+--- /dev/null
++++ b/src/vrhouse/__init__.py
+@@ -0,0 +1,9 @@
++"""Pacote principal da plataforma vrHouse."""
++from .core import AssetReference, PipelineError, SceneSpecification, VRScene
++
++__all__ = [
++    "AssetReference",
++    "PipelineError",
++    "SceneSpecification",
++    "VRScene",
++]
+diff --git a/src/vrhouse/cli.py b/src/vrhouse/cli.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..172f18175e674053914ede421888d30639a6cee4
+--- /dev/null
++++ b/src/vrhouse/cli.py
+@@ -0,0 +1,56 @@
++"""Command line interface for converting architectural plans into VR scenes."""
++from __future__ import annotations
++
++import argparse
++from pathlib import Path
++
++from vrhouse.core import SceneSpecification
++from vrhouse.pipeline.importers.multi_importer import iter_supported_suffixes, validate_source_path
++from vrhouse.pipeline.runner import run_conversion
++
++
++def build_parser() -> argparse.ArgumentParser:
++    parser = argparse.ArgumentParser(description="Convert 3D house plans into VR experiences")
++    formats = ", ".join(sorted({ext for ext in iter_supported_suffixes()}))
++    parser.add_argument("source", type=Path, help=f"Path to the 3D model ({formats})")
++    parser.add_argument("project_name", type=str, help="Name of the VR project")
++    parser.add_argument("output", type=Path, help="Directory to store VR exports")
++    parser.add_argument("--no-physics", action="store_true", help="Disable physics inference")
++    parser.add_argument("--no-ai", action="store_true", help="Disable AI material enhancement")
++    parser.add_argument(
++        "--encryption-key",
++        type=str,
++        default=None,
++        help="Base64 key to encrypt the package. A new key is generated if omitted.",
++    )
++    return parser
++
++
++def run_cli(argv: list[str] | None = None) -> None:
++    parser = build_parser()
++    args = parser.parse_args(argv)
++
++    validate_source_path(args.source)
++
++    specification = SceneSpecification(
++        project_name=args.project_name,
++        source_file=args.source,
++        enable_physics=not args.no_physics,
++        enable_ai_realism=not args.no_ai,
++        output_encryption_key=args.encryption_key,
++    )
++
++    result = run_conversion(specification, args.output)
++
++    parser.exit(
++        message=(
++            "VR scene exported to {path}\nEncryption key: {key}\n".format(
++                path=result["package_path"],
++                key=result["encryption_key"],
++            )
++        )
++    )
++
++
++if __name__ == "__main__":
++    run_cli()
+diff --git a/src/vrhouse/core.py b/src/vrhouse/core.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..8ca9469d513ae8df9a8f0eea50d4fa126a24732e
+--- /dev/null
++++ b/src/vrhouse/core.py
+@@ -0,0 +1,45 @@
++"""Core data models and utilities for the vrHouse pipeline."""
++from __future__ import annotations
++
++from dataclasses import dataclass, field
++from pathlib import Path
++from typing import Dict, List, Optional
++
++
++@dataclass
++class AssetReference:
++    """Metadata pointing to assets used in the VR experience."""
++
++    name: str
++    path: Path
++    metadata: Dict[str, str] = field(default_factory=dict)
++
++
++@dataclass
++class SceneSpecification:
++    """High-level description of the target VR scene."""
++
++    project_name: str
++    source_file: Path
++    assets: List[AssetReference] = field(default_factory=list)
++    target_platforms: List[str] = field(default_factory=lambda: ["meta-quest", "htc-vive", "pimax"])
++    enable_physics: bool = True
++    enable_ai_realism: bool = True
++    notes: Optional[str] = None
++    output_encryption_key: Optional[str] = None
++
++
++@dataclass
++class VRScene:
++    """Container for the fully baked VR experience."""
++
++    specification: SceneSpecification
++    scene_graph: Dict[str, Dict[str, str]]
++    physics_profile: Dict[str, float]
++    ai_metadata: Dict[str, str] = field(default_factory=dict)
++
++
++class PipelineError(RuntimeError):
++    """Raised when a pipeline stage fails."""
++
++    pass
+diff --git a/src/vrhouse/pipeline/__init__.py b/src/vrhouse/pipeline/__init__.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..8ab4742c850bcd9d90a4849002a68cdfefdf1fd7
+--- /dev/null
++++ b/src/vrhouse/pipeline/__init__.py
+@@ -0,0 +1,14 @@
++"""Componentes que formam o pipeline de conversÃ£o vrHouse."""
++from .ai.physics_model import PhysicsInferenceModel
++from .exporters.vr_scene_builder import VRSceneBuilder
++from .importers.multi_importer import MultiFormatImporter
++from .processors.geometry_optimizer import GeometryOptimizer
++from .processors.material_enhancer import MaterialEnhancer
++
++__all__ = [
++    "MultiFormatImporter",
++    "GeometryOptimizer",
++    "MaterialEnhancer",
++    "PhysicsInferenceModel",
++    "VRSceneBuilder",
++]
+diff --git a/src/vrhouse/pipeline/ai/__init__.py b/src/vrhouse/pipeline/ai/__init__.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/src/vrhouse/pipeline/ai/physics_model.py b/src/vrhouse/pipeline/ai/physics_model.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..dd54cd62a6234318fa59967d3c2443738f704b0d
+--- /dev/null
++++ b/src/vrhouse/pipeline/ai/physics_model.py
+@@ -0,0 +1,19 @@
++"""Placeholder for AI models that predict physics-ready parameters."""
++from __future__ import annotations
++
++from typing import Dict
++
++from vrhouse.core import SceneSpecification
++
++
++class PhysicsInferenceModel:
++    """Estimate physical properties for objects in the virtual house."""
++
++    def predict(self, specification: SceneSpecification) -> Dict[str, float]:
++        """Return basic physics parameters derived from AI models."""
++        # TODO: Integrate with a real ML model (e.g., TensorFlow, PyTorch).
++        return {
++            "gravity_scale": 1.0,
++            "friction_coefficient": 0.8,
++            "mass_distribution": 0.5,
++        }
+diff --git a/src/vrhouse/pipeline/exporters/__init__.py b/src/vrhouse/pipeline/exporters/__init__.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/src/vrhouse/pipeline/exporters/vr_scene_builder.py b/src/vrhouse/pipeline/exporters/vr_scene_builder.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..34968b5bb13bd1845bdf77da3a7581c3437cbf75
+--- /dev/null
++++ b/src/vrhouse/pipeline/exporters/vr_scene_builder.py
+@@ -0,0 +1,75 @@
++"""Compose the final VR scene assets and package them for consumption."""
++from __future__ import annotations
++
++import json
++from pathlib import Path
++from typing import Callable, Dict, Tuple
++
++from cryptography.fernet import Fernet
++
++from vrhouse.core import SceneSpecification, VRScene
++
++
++def _ensure_key_bytes(key: str | bytes) -> Tuple[str, bytes]:
++    if isinstance(key, bytes):
++        return key.decode("utf-8"), key
++    return key, key.encode("utf-8")
++
++
++class VRSceneBuilder:
++    """Assemble a VR-ready scene from processed data and physics metadata."""
++
++    def __init__(self, key_factory: Callable[[], bytes] | None = None) -> None:
++        self._key_factory = key_factory or Fernet.generate_key
++
++    def build(
++        self,
++        specification: SceneSpecification,
++        scene_graph: Dict[str, Dict[str, str]],
++        physics_profile: Dict[str, float],
++    ) -> VRScene:
++        """Create a ``VRScene`` object ready to be exported to engines such as Unity or Unreal."""
++        output = {
++            "scene_graph": scene_graph,
++            "physics_profile": physics_profile,
++            "metadata": {
++                "exporter": "vr-scene-builder",
++                "project": specification.project_name,
++            },
++        }
++        return VRScene(
++            specification=specification,
++            scene_graph=output["scene_graph"],
++            physics_profile=output["physics_profile"],
++            ai_metadata=output["metadata"],
++        )
++
++    def export_package(self, scene: VRScene, target_directory: Path) -> Tuple[Path, str]:
++        """Persist the VR scene metadata to disk using symmetric encryption."""
++
++        target_directory.mkdir(parents=True, exist_ok=True)
++
++        key = scene.specification.output_encryption_key
++        if key is None:
++            key = self._key_factory().decode("utf-8")
++
++        key_as_string, key_bytes = _ensure_key_bytes(key)
++        fernet = Fernet(key_bytes)
++
++        payload = {
++            "project": scene.specification.project_name,
++            "scene_graph": scene.scene_graph,
++            "physics_profile": scene.physics_profile,
++            "ai_metadata": scene.ai_metadata,
++        }
++
++        encrypted_payload = fernet.encrypt(json.dumps(payload, indent=2).encode("utf-8"))
++
++        output_file = target_directory / f"{scene.specification.project_name}.vrpkg"
++        output_file.write_bytes(encrypted_payload)
++
++        key_file = target_directory / f"{scene.specification.project_name}.key"
++        if scene.specification.output_encryption_key is None:
++            key_file.write_text(key_as_string, encoding="utf-8")
++
++        return output_file, key_as_string
+diff --git a/src/vrhouse/pipeline/importers/__init__.py b/src/vrhouse/pipeline/importers/__init__.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..4c0a16ca9500ade07c0d499e8c0c626a08bab293
+--- /dev/null
++++ b/src/vrhouse/pipeline/importers/__init__.py
+@@ -0,0 +1,8 @@
++"""Importadores para diferentes formatos de planta 3D."""
++from .multi_importer import MultiFormatImporter, iter_supported_suffixes, validate_source_path
++
++__all__ = [
++    "MultiFormatImporter",
++    "iter_supported_suffixes",
++    "validate_source_path",
++]
+diff --git a/src/vrhouse/pipeline/importers/multi_importer.py b/src/vrhouse/pipeline/importers/multi_importer.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..56e38bfcb8ef93bb099787ebd84398ac935a3c80
+--- /dev/null
++++ b/src/vrhouse/pipeline/importers/multi_importer.py
+@@ -0,0 +1,118 @@
++"""Import 3D architectural plans from the most common exchange formats."""
++from __future__ import annotations
++
++from dataclasses import dataclass
++from pathlib import Path
++from typing import Dict, Iterable, List, Protocol
++
++from vrhouse.core import SceneSpecification
++
++
++class ImporterError(RuntimeError):
++    """Raised when an importer cannot handle the requested format."""
++
++
++class FormatImporter(Protocol):
++    """Interface implemented by concrete format importers."""
++
++    supported_suffixes: tuple[str, ...]
++
++    def load(self, specification: SceneSpecification) -> Dict[str, Dict[str, str]]:
++        ...
++
++
++@dataclass
++class StubImporter:
++    """Utility base class shared by the placeholder importers."""
++
++    supported_suffixes: tuple[str, ...]
++    format_name: str
++
++    def load(self, specification: SceneSpecification) -> Dict[str, Dict[str, str]]:
++        if not specification.source_file.exists():
++            raise FileNotFoundError(f"Source file not found: {specification.source_file}")
++
++        return {
++            "root": {
++                "type": "scene",
++                "origin_file": str(specification.source_file),
++                "format": self.format_name,
++                "required_assets": self._infer_required_assets(specification.source_file),
++            }
++        }
++
++    def _infer_required_assets(self, source: Path) -> List[str]:
++        """Provide a list of placeholder assets to mimic texture/geometry needs."""
++
++        if source.suffix.lower() == ".gltf":
++            return ["gltf-binary", "pbr-textures"]
++        if source.suffix.lower() == ".glb":
++            return ["embedded-binary", "compressed-textures"]
++        if source.suffix.lower() == ".fbx":
++            return ["fbx-materials", "animation-curves"]
++        if source.suffix.lower() == ".obj":
++            return ["mtl-materials", "uv-coordinates"]
++        if source.suffix.lower() == ".ifc":
++            return ["ifc-structure", "bim-properties"]
++        if source.suffix.lower() == ".rvt":
++            return ["revit-metadata", "autodesk-materials"]
++        return ["generic-assets"]
++
++
++IFCImporter = StubImporter(supported_suffixes=(".ifc",), format_name="ifc")
++FBXImporter = StubImporter(supported_suffixes=(".fbx",), format_name="fbx")
++OBJImporter = StubImporter(supported_suffixes=(".obj",), format_name="obj")
++GLTFImporter = StubImporter(supported_suffixes=(".gltf", ".glb"), format_name="gltf")
++RVTImporter = StubImporter(supported_suffixes=(".rvt",), format_name="revit")
++
++SUPPORTED_IMPORTERS: tuple[StubImporter, ...] = (
++    IFCImporter,
++    FBXImporter,
++    OBJImporter,
++    GLTFImporter,
++    RVTImporter,
++)
++
++
++def iter_supported_suffixes() -> Iterable[str]:
++    for importer in SUPPORTED_IMPORTERS:
++        yield from importer.supported_suffixes
++
++
++class MultiFormatImporter:
++    """Dispatcher that selects the appropriate importer for the source file."""
++
++    def __init__(self, importers: Iterable[FormatImporter] | None = None) -> None:
++        self._importers: List[FormatImporter] = list(importers) if importers else list(SUPPORTED_IMPORTERS)
++
++    def load(self, specification: SceneSpecification) -> Dict[str, Dict[str, str]]:
++        importer = self._select_importer(specification.source_file)
++        return importer.load(specification)
++
++    def validate_source_path(self, path: Path) -> None:
++        self._select_importer(path)
++
++    def _select_importer(self, path: Path) -> FormatImporter:
++        suffix = path.suffix.lower()
++        if not suffix:
++            raise ImporterError("Source file must have an extension identifying its format")
++
++        for importer in self._importers:
++            if suffix in importer.supported_suffixes:
++                return importer
++
++        supported = ", ".join(iter_supported_suffixes())
++        raise ImporterError(f"Unsupported file type: {suffix}. Supported extensions: {supported}")
++
++
++def validate_source_path(path: Path) -> None:
++    """Public helper mirroring the classic validation API used by the CLI."""
++
++    MultiFormatImporter().validate_source_path(path)
++
++
++__all__ = [
++    "MultiFormatImporter",
++    "validate_source_path",
++    "iter_supported_suffixes",
++]
+diff --git a/src/vrhouse/pipeline/processors/__init__.py b/src/vrhouse/pipeline/processors/__init__.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/src/vrhouse/pipeline/processors/geometry_optimizer.py b/src/vrhouse/pipeline/processors/geometry_optimizer.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..675353da79c3a876796a00ada95ab73ea43a5e92
+--- /dev/null
++++ b/src/vrhouse/pipeline/processors/geometry_optimizer.py
+@@ -0,0 +1,19 @@
++"""Utilities that adapt geometry for VR friendly rendering."""
++from __future__ import annotations
++
++from typing import Dict
++
++from vrhouse.core import PipelineError
++
++
++class GeometryOptimizer:
++    """Optimize geometry and mesh data for VR consumption."""
++
++    def optimize(self, scene_graph: Dict[str, Dict[str, str]]) -> Dict[str, Dict[str, str]]:
++        """Run optimization routines such as decimation and UV unwrapping."""
++        if "root" not in scene_graph:
++            raise PipelineError("Scene graph missing root node")
++
++        optimized = dict(scene_graph)
++        optimized["root"] = {**scene_graph["root"], "geometry_optimized": "true"}
++        return optimized
+diff --git a/src/vrhouse/pipeline/processors/material_enhancer.py b/src/vrhouse/pipeline/processors/material_enhancer.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..433e4ae935cf8e6ccfcceec3e7b641777ae95b17
+--- /dev/null
++++ b/src/vrhouse/pipeline/processors/material_enhancer.py
+@@ -0,0 +1,19 @@
++"""Apply AI-powered material enhancements for realism."""
++from __future__ import annotations
++
++from typing import Dict
++
++
++class MaterialEnhancer:
++    """Attach PBR material metadata and textures."""
++
++    def enhance(self, scene_graph: Dict[str, Dict[str, str]]) -> Dict[str, Dict[str, str]]:
++        """Annotate nodes with material information inferred by AI models."""
++        enhanced = dict(scene_graph)
++        for node_id, node in enhanced.items():
++            if node_id == "root":
++                continue
++            node.setdefault("material", "ai-generated")
++        enhanced.setdefault("metadata", {})
++        enhanced["metadata"]["materials"] = "generated"
++        return enhanced
+diff --git a/src/vrhouse/pipeline/runner.py b/src/vrhouse/pipeline/runner.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..ca573047f95f915f4e474d8b0c0d62ee70a5bdc0
+--- /dev/null
++++ b/src/vrhouse/pipeline/runner.py
+@@ -0,0 +1,83 @@
++"""High level helpers to execute the conversion pipeline with progress reporting."""
++from __future__ import annotations
++
++from typing import Callable, Dict, Optional
++
++from vrhouse.core import SceneSpecification
++from vrhouse.pipeline.ai.physics_model import PhysicsInferenceModel
++from vrhouse.pipeline.exporters.vr_scene_builder import VRSceneBuilder
++from vrhouse.pipeline.importers.multi_importer import MultiFormatImporter, validate_source_path
++from vrhouse.pipeline.processors.geometry_optimizer import GeometryOptimizer
++from vrhouse.pipeline.processors.material_enhancer import MaterialEnhancer
++
++ProgressCallback = Callable[[float, str], None]
++
++
++def run_conversion(
++    specification: SceneSpecification,
++    output_directory,
++    *,
++    progress_callback: Optional[ProgressCallback] = None,
++) -> Dict[str, object]:
++    """Execute the conversion pipeline and export the encrypted package.
++
++    Parameters
++    ----------
++    specification:
++        Full description of the desired scene. ``source_file`` must point to
++        a supported format listed in :mod:`vrhouse.pipeline.importers.multi_importer`.
++    output_directory:
++        Directory where the encrypted package should be created.
++    progress_callback:
++        Optional callable receiving updates in the form ``(progress, message)`` where
++        ``progress`` is a float in the ``[0.0, 1.0]`` range.
++
++    Returns
++    -------
++    Dict[str, object]
++        Information about the exported scene, including ``package_path`` and ``encryption_key``.
++    """
++
++    def emit(progress: float, message: str) -> None:
++        if progress_callback:
++            progress_callback(progress, message)
++
++    importer = MultiFormatImporter()
++    optimizer = GeometryOptimizer()
++    enhancer = MaterialEnhancer()
++    physics_model = PhysicsInferenceModel()
++    exporter = VRSceneBuilder()
++
++    emit(0.05, "Validando arquivo de origem")
++    validate_source_path(specification.source_file)
++
++    emit(0.2, "Carregando geometria base")
++    scene_graph = importer.load(specification)
++
++    emit(0.35, "Otimizando geometria e malhas")
++    scene_graph = optimizer.optimize(scene_graph)
++
++    if specification.enable_ai_realism:
++        emit(0.5, "Aplicando IA para realismo de materiais")
++        scene_graph = enhancer.enhance(scene_graph)
++
++    physics_profile: Dict[str, float] = {}
++    if specification.enable_physics:
++        emit(0.65, "Gerando perfil de fÃ­sica")
++        physics_profile = physics_model.predict(specification)
++
++    emit(0.8, "Compondo cena VR criptografada")
++    scene = exporter.build(specification, scene_graph, physics_profile)
++
++    emit(0.95, "Exportando pacote protegido")
++    package_path, encryption_key = exporter.export_package(scene, output_directory)
++
++    emit(1.0, "ConversÃ£o concluÃ­da")
++    return {
++        "scene": scene,
++        "package_path": package_path,
++        "encryption_key": encryption_key,
++    }
++
++
++__all__ = ["run_conversion", "ProgressCallback"]
+diff --git a/src/vrhouse/ui/app.py b/src/vrhouse/ui/app.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..95a993c8e4f33062375f14abf8c55c4e8d9b0b41
+--- /dev/null
++++ b/src/vrhouse/ui/app.py
+@@ -0,0 +1,279 @@
++"""Simple desktop UI to guide novice users through the conversion pipeline."""
++from __future__ import annotations
++
++import json
++import queue
++import threading
++import tkinter as tk
++from pathlib import Path
++from tkinter import filedialog, messagebox, ttk
++from typing import Optional
++
++from cryptography.fernet import Fernet, InvalidToken
++
++from vrhouse.core import SceneSpecification
++from vrhouse.pipeline.importers.multi_importer import iter_supported_suffixes
++from vrhouse.pipeline.runner import run_conversion
++
++
++class VRHouseApp(tk.Tk):
++    """Tkinter based shell exposing the vrHouse pipeline to end users."""
++
++    def __init__(self) -> None:
++        super().__init__()
++        self.title("vrHouse - Conversor VR")
++        self.geometry("640x360")
++        self.minsize(560, 320)
++
++        self._queue: queue.Queue[tuple[float, str]] = queue.Queue()
++        self._worker: Optional[threading.Thread] = None
++        self._last_result: Optional[dict[str, object]] = None
++
++        self._build_widgets()
++        self._poll_updates()
++
++    def _build_widgets(self) -> None:
++        padding = {"padx": 12, "pady": 6}
++
++        header = ttk.Label(
++            self,
++            text=(
++                "Transforme suas plantas 3D em experiÃªncias VR realistas.\n"
++                "Selecione o arquivo, escolha as opÃ§Ãµes desejadas e deixe o vrHouse cuidar do resto."
++            ),
++            justify=tk.LEFT,
++            wraplength=600,
++        )
++        header.grid(row=0, column=0, columnspan=3, sticky="w", **padding)
++
++        ttk.Label(self, text="Arquivo da planta 3D").grid(row=1, column=0, sticky="w", **padding)
++        self.source_var = tk.StringVar()
++        ttk.Entry(self, textvariable=self.source_var, width=60).grid(row=1, column=1, sticky="ew", **padding)
++        ttk.Button(self, text="Procurar", command=self._browse_source).grid(row=1, column=2, sticky="ew", **padding)
++
++        ttk.Label(self, text="Pasta de saÃ­da").grid(row=2, column=0, sticky="w", **padding)
++        self.output_var = tk.StringVar()
++        ttk.Entry(self, textvariable=self.output_var, width=60).grid(row=2, column=1, sticky="ew", **padding)
++        ttk.Button(self, text="Selecionar", command=self._browse_output).grid(row=2, column=2, sticky="ew", **padding)
++
++        ttk.Label(self, text="Nome do projeto").grid(row=3, column=0, sticky="w", **padding)
++        self.project_var = tk.StringVar()
++        ttk.Entry(self, textvariable=self.project_var, width=40).grid(row=3, column=1, sticky="w", **padding)
++
++        self.physics_var = tk.BooleanVar(value=True)
++        self.ai_var = tk.BooleanVar(value=True)
++        ttk.Checkbutton(self, text="Aplicar fÃ­sica realista", variable=self.physics_var).grid(
++            row=4, column=0, columnspan=2, sticky="w", **padding
++        )
++        ttk.Checkbutton(self, text="Melhorar materiais com IA", variable=self.ai_var).grid(
++            row=5, column=0, columnspan=2, sticky="w", **padding
++        )
++
++        ttk.Label(self, text="Chave de criptografia (opcional)").grid(row=6, column=0, sticky="w", **padding)
++        self.key_var = tk.StringVar()
++        ttk.Entry(self, textvariable=self.key_var, width=60).grid(row=6, column=1, sticky="ew", **padding)
++        ttk.Button(self, text="Gerar chave", command=self._generate_key).grid(row=6, column=2, sticky="ew", **padding)
++
++        self.progress = ttk.Progressbar(self, orient="horizontal", mode="determinate", maximum=100)
++        self.progress.grid(row=7, column=0, columnspan=3, sticky="ew", padx=12, pady=(12, 0))
++
++        self.progress_label = ttk.Label(self, text="Aguardando inÃ­cio da conversÃ£o")
++        self.progress_label.grid(row=8, column=0, columnspan=3, sticky="w", padx=12, pady=(4, 12))
++
++        action_frame = ttk.Frame(self)
++        action_frame.grid(row=9, column=0, columnspan=3, sticky="ew", padx=12, pady=(8, 12))
++        action_frame.columnconfigure(0, weight=1)
++        action_frame.columnconfigure(1, weight=1)
++
++        self.convert_button = ttk.Button(action_frame, text="Iniciar conversÃ£o", command=self._start_conversion)
++        self.convert_button.grid(row=0, column=0, sticky="ew", padx=(0, 8))
++
++        self.preview_button = ttk.Button(action_frame, text="Visualizar preview", state=tk.DISABLED, command=self._preview)
++        self.preview_button.grid(row=0, column=1, sticky="ew", padx=(8, 0))
++
++        self.columnconfigure(1, weight=1)
++
++    def _browse_source(self) -> None:
++        suffixes = [f"*{s}" for s in iter_supported_suffixes()]
++        path = filedialog.askopenfilename(
++            title="Selecione o arquivo 3D",
++            filetypes=[("Formatos suportados", " ".join(suffixes))],
++        )
++        if path:
++            self.source_var.set(path)
++            suggested_name = Path(path).stem
++            if not self.project_var.get():
++                self.project_var.set(suggested_name)
++
++    def _browse_output(self) -> None:
++        path = filedialog.askdirectory(title="Selecione a pasta de saÃ­da")
++        if path:
++            self.output_var.set(path)
++
++    def _generate_key(self) -> None:
++        self.key_var.set(Fernet.generate_key().decode("utf-8"))
++
++    def _start_conversion(self) -> None:
++        if self._worker and self._worker.is_alive():
++            messagebox.showinfo("ConversÃ£o em andamento", "Aguarde a finalizaÃ§Ã£o antes de iniciar outra conversÃ£o.")
++            return
++
++        try:
++            specification = self._build_specification()
++        except ValueError as exc:
++            messagebox.showerror("Dados invÃ¡lidos", str(exc))
++            return
++
++        output_dir = Path(self.output_var.get()).expanduser()
++
++        self.progress_label.config(text="Preparando conversÃ£o")
++        self.progress.config(value=0)
++        self._queue = queue.Queue()
++        self._last_result = None
++        self.preview_button.config(state=tk.DISABLED)
++
++        def worker() -> None:
++            try:
++                result = run_conversion(
++                    specification,
++                    output_dir,
++                    progress_callback=lambda progress, message: self._queue.put((progress, message)),
++                )
++                self._queue.put((1.0, json.dumps({"status": "done", "result": result}, default=str)))
++            except Exception as exc:
++                self._queue.put((-1.0, str(exc)))
++
++        self._worker = threading.Thread(target=worker, daemon=True)
++        self._worker.start()
++        self._set_controls_enabled(False)
++
++    def _build_specification(self) -> SceneSpecification:
++        source = Path(self.source_var.get()).expanduser()
++        if not source.exists():
++            raise ValueError("Selecione um arquivo 3D vÃ¡lido.")
++
++        project = self.project_var.get().strip()
++        if not project:
++            raise ValueError("Informe um nome para o projeto.")
++
++        output_dir_value = self.output_var.get().strip()
++        if not output_dir_value:
++            raise ValueError("Selecione uma pasta de saÃ­da.")
++
++        encryption_key = self.key_var.get().strip() or None
++        if encryption_key is not None:
++            try:
++                Fernet(encryption_key.encode("utf-8"))
++            except Exception as exc:
++                raise ValueError(f"Chave de criptografia invÃ¡lida: {exc}") from exc
++
++        return SceneSpecification(
++            project_name=project,
++            source_file=source,
++            enable_physics=self.physics_var.get(),
++            enable_ai_realism=self.ai_var.get(),
++            output_encryption_key=encryption_key,
++        )
++
++    def _set_controls_enabled(self, enabled: bool) -> None:
++        state = tk.NORMAL if enabled else tk.DISABLED
++        for child in self.winfo_children():
++            self._set_state_recursively(child, state)
++        self.convert_button.configure(state=tk.NORMAL if enabled else tk.DISABLED)
++        if not enabled:
++            self.preview_button.configure(state=tk.DISABLED)
++        elif self._last_result:
++            self.preview_button.configure(state=tk.NORMAL)
++
++    def _set_state_recursively(self, widget: tk.Widget, state: str) -> None:
++        if isinstance(widget, (ttk.Entry, ttk.Checkbutton, ttk.Button, ttk.Combobox)):
++            widget.configure(state=state)
++        if isinstance(widget, (ttk.Frame,)):
++            for child in widget.winfo_children():
++                self._set_state_recursively(child, state)
++
++    def _poll_updates(self) -> None:
++        try:
++            while True:
++                progress, message = self._queue.get_nowait()
++                if progress < 0:
++                    self._handle_error(message)
++                elif progress >= 1:
++                    self._handle_completion(message)
++                else:
++                    self.progress.config(value=progress * 100)
++                    self.progress_label.config(text=message)
++        except queue.Empty:
++            pass
++        finally:
++            self.after(200, self._poll_updates)
++
++    def _handle_error(self, message: str) -> None:
++        self._set_controls_enabled(True)
++        self.progress.config(value=0)
++        self.progress_label.config(text="Ocorreu um erro na conversÃ£o")
++        messagebox.showerror("Falha na conversÃ£o", message)
++        self._worker = None
++
++    def _handle_completion(self, message: str) -> None:
++        self._set_controls_enabled(True)
++        try:
++            payload = json.loads(message)
++        except json.JSONDecodeError:
++            payload = {"status": "done", "result": {}}
++        self._last_result = payload.get("result")
++        self.progress.config(value=100)
++        self.progress_label.config(text="ConversÃ£o concluÃ­da com sucesso")
++        self._worker = None
++        if self._last_result:
++            self.preview_button.configure(state=tk.NORMAL)
++            info = self._last_result
++            package = info.get("package_path")
++            key = info.get("encryption_key")
++            messagebox.showinfo(
++                "ConversÃ£o finalizada",
++                (
++                    "Pacote criado em:\n{package}\n\n"
++                    "Chave de criptografia:\n{key}\n\n"
++                    "Guarde a chave com seguranÃ§a para abrir o conteÃºdo nos aplicativos oficiais."
++                ).format(package=package, key=key),
++            )
++
++    def _preview(self) -> None:
++        if not self._last_result:
++            messagebox.showinfo("Sem preview", "Realize uma conversÃ£o antes de visualizar o preview.")
++            return
++
++        package_path = Path(str(self._last_result.get("package_path")))
++        key = str(self._last_result.get("encryption_key"))
++
++        try:
++            decrypted = self._decrypt_package(package_path, key)
++        except (InvalidToken, FileNotFoundError) as exc:
++            messagebox.showerror("Preview indisponÃ­vel", f"NÃ£o foi possÃ­vel abrir o pacote protegido: {exc}")
++            return
++
++        preview_window = tk.Toplevel(self)
++        preview_window.title("Preview do Projeto")
++        preview_window.geometry("480x320")
++        text = tk.Text(preview_window, wrap=tk.WORD)
++        text.insert(tk.END, json.dumps(decrypted, indent=2, ensure_ascii=False))
++        text.configure(state=tk.DISABLED)
++        text.pack(expand=True, fill=tk.BOTH)
++
++    def _decrypt_package(self, package_path: Path, key: str) -> dict[str, object]:
++        fernet = Fernet(key.encode("utf-8"))
++        payload = fernet.decrypt(package_path.read_bytes())
++        return json.loads(payload)
++
++
++def launch() -> None:
++    app = VRHouseApp()
++    app.mainloop()
++
++
++__all__ = ["launch", "VRHouseApp"]
++
++
++if __name__ == "__main__":
++    launch()
+diff --git a/tests/__init__.py b/tests/__init__.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+ 
