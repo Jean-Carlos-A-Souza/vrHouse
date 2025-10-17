@@ -1,4 +1,5 @@
 # vrHouse
+<<<<<<< HEAD
 
 Plataforma para converter projetos residenciais 3D em experiências de realidade virtual com física e realismo gerados por IA.
 
@@ -64,3 +65,6 @@ Ao final da execução, o sistema gera um pacote criptografado (`.vrpkg`) e info
 - Conectar modelos de IA para textura procedimental e simulação física.
 - Desenvolver exportação direta para motores VR e WebXR.
 - Adicionar testes automatizados e pipelines CI/CD.
+=======
+App de conversão de projetos 3D para o VR
+>>>>>>> f80fce9f40bb59927adf5c58fd3ac0fcd8542a66
