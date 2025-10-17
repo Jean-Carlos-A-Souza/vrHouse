@@ -1,0 +1,27 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.cache/
+.mypy_cache/
+.pytest_cache/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Saída/arquivos pesados (mantenha fora do Git; use LFS se necessário)
+output/
+tmp/
+*.glb
+*.gltf
+*.fbx
+*.obj
+*.dae
+*.zip

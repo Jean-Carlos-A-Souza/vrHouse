@@ -1,0 +1,19 @@
+# Configurações padrão do pipeline vrHouse
+project:
+  target_platforms:
+    - meta-quest
+    - htc-vive
+    - pimax
+pipeline:
+  enable_physics: true
+  enable_ai_realism: true
+  geometry_optimizer:
+    decimation_ratio: 0.5
+    preserve_normals: true
+  material_enhancer:
+    texture_resolution: 2048
+    allow_procedural_textures: true
+export:
+  output_format: vrpkg
+  encrypt_packages: true
+  compress_assets: false

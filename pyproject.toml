@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=67", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vrhouse"
+version = "0.1.0"
+description = "Conversão de plantas arquitetônicas 3D em experiências VR com IA"
+authors = [
+    { name = "Equipe vrHouse" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "cryptography>=41",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Developers",
+    "Topic :: Multimedia :: Graphics :: 3D Modeling",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[project.scripts]
+vrhouse = "vrhouse.cli:run_cli"
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+vrhouse = ["**/*.yaml", "**/*.yml", "**/*.md"]
